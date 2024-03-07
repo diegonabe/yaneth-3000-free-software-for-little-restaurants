@@ -54,6 +54,7 @@ class VentanaMesas:
     def abrir_ventana_pedidos(self, mesa):
         ventana_pedidos = tk.Toplevel(self.ventana_mesas)
         ventana_pedidos.title(f"Pedidos - {mesa}")
+        self.numero_mesa = mesa
 
         # Configurar tamaño de la ventana de pedidos
         ventana_pedidos.geometry("800x600")
@@ -135,7 +136,7 @@ class VentanaMesas:
             plato = self.tree.item(item, "values")
             # Insertar el elemento en el TreeView del frame_central
             self.tree_central.insert("", "end", values=plato)
-
+            print(plato[0], plato[1])
             # Guardar el pedido en la base de datos
             self.guardar_pedido(plato[0], plato[1], mesa)
             self.actualizar_pedidos()
@@ -221,10 +222,26 @@ class VentanaMesas:
             conexion.close()
 
     def actualizar_pedidos(self):
-        # Actualiza el TreeView central con los datos de la lista de pedidos
-        # Borra todos los elementos del TreeView central
-        for item in self.tree_central.get_children():
-            self.tree_central.delete(item)
-        # Inserta los pedidos de la lista en el TreeView central
-        for pedido in self.pedidos:
-            self.tree_central.insert("", "end", values=(pedido["nombre"], pedido["precio"]))
+        try:
+            # Conexión a la base de datos SQLite
+            conexion = sqlite3.connect('datos.db')
+            cursor = conexion.cursor()
+
+            # Borra todos los elementos del TreeView central
+            for item in self.tree_central.get_children():
+                self.tree_central.delete(item)
+
+            # Consulta los pedidos de la tabla Pedidos en la base de datos
+            cursor.execute("SELECT plato, precio FROM pedidos WHERE mesa = ?", (self.numero_mesa,))
+            datos_pedidos = cursor.fetchall()
+
+            # Inserta los pedidos de la base de datos en el TreeView central
+            for pedido in datos_pedidos:
+                self.tree_central.insert("", "end", values=(pedido[0], pedido[1]))
+
+        except Exception as e:
+            print("Error al actualizar los pedidos:", e)
+
+        finally:
+            # Cerrar la conexión a la base de datos
+            conexion.close()
